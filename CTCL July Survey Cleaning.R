@@ -165,6 +165,16 @@ stats_age
 stats_party
 stats_edu
 
-#Conduct the t-test
+#Conduct a t-test
 ttest <- svyttest(post_messenger ~ ex_group, design=design)
 ttest
+
+# #Calculate weighted means for each variable
+# mean_message1 <- svytotal(~ A1_message2, design)
+# mean_message2 <- svytotal(~ A2_message2, design)
+# 
+# #Extract the weighted means
+# mean_message1 <- as.numeric(mean_message1)
+# mean_message2 <- as.numeric(mean_message2)
+# 
+# t_test <- t.test(mean_message1, mean_message2)
