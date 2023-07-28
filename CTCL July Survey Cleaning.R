@@ -16,8 +16,6 @@ library(weights)
 library(anesrake)
 library(tidyverse)
 
-testing!
-
 #Set working directory to tell the script where to look for files
 setwd("/Users/ericwiemer/Documents/CitizenData/CTCL")
 
