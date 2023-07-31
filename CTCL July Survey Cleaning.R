@@ -227,6 +227,7 @@ df <- as.data.frame(df)
 #Instantiate survey design to apply the weights
 design <- svydesign(ids = ~id, weights = ~weights, data = df)
 
+
 #Replace "post_admin_feel" with any variable to see how mean scores differ
 #between social media and traditional media users
 ttest <- svyttest(post_admin_feel ~ bi_social_trad, design=design)
