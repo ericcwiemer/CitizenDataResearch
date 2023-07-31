@@ -1,3 +1,4 @@
+############ INGESTING DATA ###################
 # https://bijean.io/blog/tutorials/anesrake/anesrake-tutorial/
 ### Only have to install packages once! ###
 install.packages("dplyr")
@@ -120,7 +121,7 @@ stats_party <- calculate_summary_stats(df_clean$demo_party)
 #Save the weighted dataset to a new .csv file
 write.csv(df_clean, "CTCL_July Survey_weighted.csv")
 
-################## ANALYSIS ##########################
+################## PRE-PROCESSING ANALYSIS ##########################
 
 library(dplyr)
 library(survey)
@@ -137,12 +138,48 @@ setwd("/Users/ericwiemer/Documents/CitizenData/CTCL")
 df <- read.csv("CTCL_July Survey_weighted.csv")
 df <- as.data.frame(df)
 
+#Recode news sources to include open-ended responses
+df$social_trad <- ifelse(df$news %in% c(4, 5, 6, 7, 8, 9, 10, 11, 12), 1,
+                         ifelse(df$news %in% c(2, 3, 13, 14, 15, 16, 17), 2,
+                                ifelse(df$news == 1, 4, 0)))
+
+unique(df$social_trad)
+
+unique_texts <- unique(df$news_18_TEXT)
+
+for (text_value in unique_texts) {
+  cat(paste("Please enter the type for text:", text_value, " (social/traditional/search/podcast/other): "))
+  user_input <- readline()
+
+  if (tolower(user_input) %in% c("social", "traditional", "search", "podcast", "other")) {
+    current_value <- df$social_trad[df$news_18_TEXT == text_value]
+    
+    if (is.na(current_value) || (is.numeric(current_value) && current_value == 0)) {
+      if (tolower(user_input) == "social") {
+        social_trad_value <- 1
+      } else if (tolower(user_input) == "traditional") {
+        social_trad_value <- 2
+      } else if (tolower(user_input) == "search") {
+        social_trad_value <- 3
+      } else {
+        social_trad_value <- 0
+      }
+      df$social_trad[df$news_18_TEXT == text_value] <- social_trad_value
+    }
+  } else {
+    cat("Invalid input. Skipping this value.\n")
+  }
+}
+
+#Creat binary variable where social=0 and traditional=1
+df$bi_social_trad <- ifelse(df$social_trad == 1, 1,
+                            ifelse(df$social_trad == 2, 2, NA))
+df$bi_social_trad <- as.integer(df$bi_social_trad)
+
+write.csv(df, "CTCL_July Survey_weighted.csv")
+
 #Instantiate survey design to apply the weights
 design <- svydesign(ids = ~id, weights = ~weights, data = df)
-
-df$social_trad <- ifelse(df$news %in% c(4, 5, 6, 7, 8, 9, 10, 11, 12), 1,
-                         ifelse(df$news %in% c(1, 2, 3, 13, 14, 15, 16, 17), 0, NA))
-df$social_trad <- as.integer(df$social_trad)
 
 #Function to calculate summary statistics for a survey design
 summary_stats <- function(design, variable_name) {
@@ -170,30 +207,36 @@ stats_age
 stats_party
 stats_edu
 
-#Recode open ended news sources
-unique_texts <- unique(df$news_18_TEXT)
+################## CLEANED UP ANALYSIS ##########################
 
-for (text_value in unique_texts) {
-  cat(paste("Please enter the type for text:", text_value, " (social/traditional/other): "))
-  user_input <- readline()
-  
-  if (tolower(user_input) %in% c("social", "traditional", "other")) {
-    if (tolower(user_input) == "social") {
-      social_trad_value <- 1
-    } else if (tolower(user_input) == "traditional") {
-      social_trad_value <- 2
-    } else {
-      social_trad_value <- 0
-    }
-    df$social_trad[df$text == text_value] <- social_trad_value
-  } else {
-    cat("Invalid input. Skipping this value.\n")
-  }
-}
+library(dplyr)
+library(survey)
+library(weights)
+library(anesrake)
+library(tidyverse)
+library(pastecs)
+library(survey)
 
-write.csv(df, "CTCL_July Survey_weighted.csv")
+#Set working directory to tell the script where to look for files
+setwd("/Users/ericwiemer/Documents/CitizenData/CTCL")
 
+#Import the .csv dataset
+df <- read.csv("CTCL_July Survey_weighted.csv")
+df <- as.data.frame(df)
+
+#Instantiate survey design to apply the weights
+design <- svydesign(ids = ~id, weights = ~weights, data = df)
+
+#Replace "post_admin_feel" with any variable to see how mean scores differ
+#between social media and traditional media users
+ttest <- svyttest(post_admin_feel ~ bi_social_trad, design=design)
+ttest
+
+####
 ####Data with only social media participants###
+####
+
+# social_trad: 1=social, 2=traditional, 3=search, 4=podcast, 0=other
 
 df_sm_hold <- df[df$social_trad == 1, ]
 
@@ -208,8 +251,11 @@ sm_design <- svydesign(ids = ~id, weights = ~weights, data = df_sm)
 ttest <- svyttest(post_admin_feel ~ ex_group, design=sm_design)
 ttest
 
+####
 ####Data with only traditional media participants###
-df_t_hold <- df[df$social_trad == 0, ]
+####
+
+df_t_hold <- df[df$social_trad == 2, ]
 
 #Get rid of missing rows
 t_missing_rows <- complete.cases(df_t_hold$weights, df_t_hold$id)
