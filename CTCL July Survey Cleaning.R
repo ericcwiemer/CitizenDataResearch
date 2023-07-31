@@ -29,9 +29,6 @@ missing_rows <- complete.cases(df$demo_race, df$demo_age_buckets, df$demo_edu, d
 #Get rid of missing rows
 df_clean <- df[missing_rows,]
 
-#Show unique values of a variable
-#unique(df$demo_race)
-
 # gender: 1=male, 2=female, 999=self-describe
 # ___
 # ideology: 1=very conservative, 2=somewhat conservative, 3=moderate, 4=somewhat liberal,
@@ -90,7 +87,7 @@ outsave <- anesrake(targets, df_clean, caseid = df_clean$id,
                     type = "pctlim", pctlim = .05 , nlim = 4,
                     iterate = TRUE , force1 = TRUE)
 
-#Add a column to your dataset for the newly calculated weights
+#Add a column for the weights
 df_clean$weights <- outsave$weightvec
 
 #Function to assign experimental groups to each participant
@@ -143,6 +140,10 @@ df <- as.data.frame(df)
 #Instantiate survey design to apply the weights
 design <- svydesign(ids = ~id, weights = ~weights, data = df)
 
+df$social_trad <- ifelse(df$news %in% c(4, 5, 6, 7, 8, 9, 10, 11, 12), 1,
+                         ifelse(df$news %in% c(1, 2, 3, 13, 14, 15, 16, 17), 0, NA))
+df$social_trad <- as.integer(df$social_trad)
+
 #Function to calculate summary statistics for a survey design
 summary_stats <- function(design, variable_name) {
   variable_formula <- as.formula(paste0("~", variable_name))
@@ -160,21 +161,63 @@ stats_race <- summary_stats(design, "demo_race")
 stats_age <- summary_stats(design, "demo_age_buckets")
 stats_party <- summary_stats(design, "demo_party")
 stats_edu <- summary_stats(design, "demo_edu")
+stats_news <- summary_stats(design, "news")
+stats_social_trad <- summary_stats(design, "social_trad")
+stats_social_trad
+stats_news
 stats_race
 stats_age
 stats_party
 stats_edu
 
+#Recode open ended news sources
+unique_texts <- unique(df$news_18_TEXT)
+
+for (text_value in unique_texts) {
+  cat(paste("Please enter the type for text:", text_value, " (social/traditional/other): "))
+  user_input <- readline()
+  
+  if (tolower(user_input) %in% c("social", "traditional", "other")) {
+    if (tolower(user_input) == "social") {
+      social_trad_value <- 1
+    } else if (tolower(user_input) == "traditional") {
+      social_trad_value <- 2
+    } else {
+      social_trad_value <- 0
+    }
+    df$social_trad[df$text == text_value] <- social_trad_value
+  } else {
+    cat("Invalid input. Skipping this value.\n")
+  }
+}
+
+write.csv(df, "CTCL_July Survey_weighted.csv")
+
+####Data with only social media participants###
+
+df_sm_hold <- df[df$social_trad == 1, ]
+
+#Get rid of missing rows
+sm_missing_rows <- complete.cases(df_sm_hold$weights, df_sm_hold$id)
+df_sm <- df_sm_hold[sm_missing_rows,]
+
+#Instantiate survey design to apply the weights
+sm_design <- svydesign(ids = ~id, weights = ~weights, data = df_sm)
+
 #Conduct a t-test
-ttest <- svyttest(post_messenger ~ ex_group, design=design)
+ttest <- svyttest(post_admin_feel ~ ex_group, design=sm_design)
 ttest
 
-# #Calculate weighted means for each variable
-# mean_message1 <- svytotal(~ A1_message2, design)
-# mean_message2 <- svytotal(~ A2_message2, design)
-# 
-# #Extract the weighted means
-# mean_message1 <- as.numeric(mean_message1)
-# mean_message2 <- as.numeric(mean_message2)
-# 
-# t_test <- t.test(mean_message1, mean_message2)
+####Data with only traditional media participants###
+df_t_hold <- df[df$social_trad == 0, ]
+
+#Get rid of missing rows
+t_missing_rows <- complete.cases(df_t_hold$weights, df_t_hold$id)
+df_t <- df_t_hold[t_missing_rows,]
+
+#Instantiate survey design to apply the weights
+t_design <- svydesign(ids = ~id, weights = ~weights, data = df_t)
+
+#Conduct a t-test
+ttest <- svyttest(post_admin_feel ~ ex_group, design=t_design)
+ttest
