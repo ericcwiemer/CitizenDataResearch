@@ -227,11 +227,31 @@ df <- as.data.frame(df)
 #Instantiate survey design to apply the weights
 design <- svydesign(ids = ~id, weights = ~weights, data = df)
 
+#Function to calculate summary statistics for a survey design
+summary_stats <- function(design, variable_name) {
+  variable_formula <- as.formula(paste0("~", variable_name))
+  frequency <- svytable(variable_formula, design)
+  percentage <- prop.table(frequency) * 100
+  totals <- sum(frequency)
+  summary_stats <- data.frame(Frequency = frequency,
+                              Percentage = paste0(format(percentage, digits = 2), "%"),
+                              Total = totals)
+  return(summary_stats)
+}
+
+#Calculate summary statistics
+stats_postadminfeel <- summary_stats(design, "post_admin_feel")
+stats_postadminfeel
 
 #Replace "post_admin_feel" with any variable to see how mean scores differ
 #between social media and traditional media users
 ttest <- svyttest(post_admin_feel ~ bi_social_trad, design=design)
 ttest
+
+#Run a regression
+admin_mean <- svymean(~post_admin_feel, design=design, na.rm=TRUE)
+regression <- summary(svyglm(post_admin_feel ~ pre_admin_feel, design=design))
+regression
 
 ####
 ####Data with only social media participants###
