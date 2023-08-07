@@ -242,6 +242,10 @@ summary_stats <- function(design, variable_name) {
 #Calculate summary statistics
 stats_postadminfeel <- summary_stats(design, "post_admin_feel")
 stats_postadminfeel
+stats_preofficebias <- summary_stats(design, "pre_office_bias")
+stats_preofficebias
+stats_postofficebias <- summary_stats(design, "post_office_bias")
+stats_postofficebias
 
 #Replace "post_admin_feel" with any variable to see how mean scores differ
 #between social media and traditional media users
@@ -252,6 +256,28 @@ ttest
 admin_mean <- svymean(~post_admin_feel, design=design, na.rm=TRUE)
 regression <- summary(svyglm(post_admin_feel ~ pre_admin_feel, design=design))
 regression
+
+
+
+####
+####Split data by supporters, persuadables, and unreachables###
+####
+
+#Supporters
+supporters <- subset(df, (pre_office_bias %in% c(1, 2) & post_office_bias %in% 
+                            c(1, 2)) | (pre_admin_feel %in% c(1, 2) & 
+                                          post_admin_feel %in% c(1, 2)))
+s_design <- svydesign(ids = ~id, weights = ~weights, data = supporters)
+
+#Persuadables
+persuadables <- subset(df, (post_office_bias <= pre_office_bias - 1) | 
+                         (post_admin_feel <= pre_admin_feel -1))
+p_design <- svydesign(ids = ~id, weights = ~weights, data = persuadables)
+
+#Unreachables
+unreachables <- subset(df, (pre_office_bias %in% c(5) & 
+                         post_office_bias %in% c(5)) 
+                       | (pre_admin_feel %in% c(5) & post_admin_feel %in% c(5)))
 
 ####
 ####Data with only social media participants###
