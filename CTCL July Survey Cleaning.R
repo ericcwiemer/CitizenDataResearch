@@ -257,27 +257,36 @@ admin_mean <- svymean(~post_admin_feel, design=design, na.rm=TRUE)
 regression <- summary(svyglm(post_admin_feel ~ pre_admin_feel, design=design))
 regression
 
-
-
 ####
 ####Split data by supporters, persuadables, and unreachables###
 ####
 
 #Supporters
-supporters <- subset(df, (pre_office_bias %in% c(1, 2) & post_office_bias %in% 
-                            c(1, 2)) | (pre_admin_feel %in% c(1, 2) & 
-                                          post_admin_feel %in% c(1, 2)))
+supporters <- subset(df, pre_admin_feel %in% c(1, 2) & post_admin_feel %in% c(1, 2))
 s_design <- svydesign(ids = ~id, weights = ~weights, data = supporters)
 
+stats_postofficebias <- summary_stats(design, "post_office_bias")
+stats_postofficebias
+
 #Persuadables
-persuadables <- subset(df, (post_office_bias <= pre_office_bias - 1) | 
-                         (post_admin_feel <= pre_admin_feel -1))
+persuadables <- subset(df, post_admin_feel <= pre_admin_feel-1)
+p_design <- svydesign(ids = ~id, weights = ~weights, data = persuadables)
+persuadables <- subset(df, pre_admin_feel %in% c(3, 4, 6))
 p_design <- svydesign(ids = ~id, weights = ~weights, data = persuadables)
 
+stats_messenger <- summary_stats(p_design, "pre_messenger")
+stats_messengerpipe <- summary_stats(p_design, "pre_messenger_pipe")
+stats_messenger
+stats_messengerpipe
+
+stats_pre <- summary_stats(design, "news")
+stats_post <- summary_stats(design, "post_admin_feel")
+stats_pre
+stats_post
+
 #Unreachables
-unreachables <- subset(df, (pre_office_bias %in% c(5) & 
-                         post_office_bias %in% c(5)) 
-                       | (pre_admin_feel %in% c(5) & post_admin_feel %in% c(5)))
+unreachables <- subset(df, pre_admin_feel %in% c(5) & post_admin_feel %in% c(5))
+u_design <- svydesign(ids = ~id, weights = ~weights, data = unreachables)
 
 ####
 ####Data with only social media participants###
