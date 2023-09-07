@@ -265,28 +265,38 @@ regression
 supporters <- subset(df, pre_admin_feel %in% c(1, 2) & post_admin_feel %in% c(1, 2))
 s_design <- svydesign(ids = ~id, weights = ~weights, data = supporters)
 
-stats_postofficebias <- summary_stats(design, "post_office_bias")
+##bias-based
+supporters2 <- subset(df, (pre_office_bias %in% c(1, 2) & post_office_bias >= pre_office_bias) | (pre_admin_feel %in% c(1, 2) & post_admin_feel %in% c(1, 2)))
+s_design2 <- svydesign(ids = ~id, weights = ~weights, data = supporters2)
+
+stats_postofficebias <- summary_stats(s_design2, "demo_gender")
 stats_postofficebias
 
 #Persuadables
-persuadables <- subset(df, post_admin_feel <= pre_admin_feel-1)
-p_design <- svydesign(ids = ~id, weights = ~weights, data = persuadables)
 persuadables <- subset(df, pre_admin_feel %in% c(3, 4, 6))
 p_design <- svydesign(ids = ~id, weights = ~weights, data = persuadables)
 
-stats_messenger <- summary_stats(p_design, "pre_messenger")
-stats_messengerpipe <- summary_stats(p_design, "pre_messenger_pipe")
-stats_messenger
-stats_messengerpipe
+##bias-based
+persuadables2 <- subset(df, (pre_office_bias %in% c(1, 2, 3, 4) & post_office_bias <= pre_office_bias) | (post_admin_feel <= pre_admin_feel-1))
+p_design2 <- svydesign(ids = ~id, weights = ~weights, data = persuadables2)
 
-stats_pre <- summary_stats(design, "news")
-stats_post <- summary_stats(design, "post_admin_feel")
-stats_pre
-stats_post
+stats_postofficebias <- summary_stats(p_design2, "demo_gender")
+stats_postofficebias
+
+#trust_past: 1=sig in, 2=in, 3=same, 4=de, 5=sig de, 6=dk
+persuadables3 <- subset(df, trust_past %in% c(3, 4, 6))
+p_design3 <- svydesign(ids = ~id, weights = ~weights, data = persuadables3)
 
 #Unreachables
 unreachables <- subset(df, pre_admin_feel %in% c(5) & post_admin_feel %in% c(5))
 u_design <- svydesign(ids = ~id, weights = ~weights, data = unreachables)
+
+##bias-based
+unreachables2 <- subset(df, (pre_office_bias %in% c(5) & post_office_bias %in% c(5)) | (pre_admin_feel %in% c(5) & post_admin_feel %in% c(5)))
+u_design2 <- svydesign(ids = ~id, weights = ~weights, data = unreachables2)
+
+stats_postofficebias <- summary_stats(u_design2, "demo_gender")
+stats_postofficebias
 
 ####
 ####Data with only social media participants###
